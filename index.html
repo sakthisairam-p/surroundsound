@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>3D Surround PRO - Final Stable</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="app-container">
+        <!-- Dashboard Header -->
+        <header>
+            <div class="header-text">
+                <h1>3D Surround<br><span>Pro v2.0</span></h1>
+                <input type="file" id="musicFile" accept="audio/*" multiple style="display:none">
+                <label for="musicFile" id="fileBtn" class="import-btn">📂 Open Playlist</label>
+                <div class="now-playing-row">
+                    <div id="nowPlaying" class="tiny-label">No Track Loaded</div>
+                    <div class="mini-controls">
+                        <button id="mPrev" class="m-btn">⏮</button>
+                        <button id="mPlay" class="m-btn">▶</button>
+                        <button id="mNext" class="m-btn">⏭</button>
+                    </div>
+                </div>
+            </div>
+            <label class="switch power-main">
+                <input type="checkbox" id="powerSwitch">
+                <span class="slider round"></span>
+            </label>
+        </header>
+
+        <main>
+            <!-- Unified Pro Console -->
+            <section class="card main-console">
+                <!-- 3D Enhancement Sub-Section -->
+                <div class="sub-section disabled" id="enhSub">
+                    <div class="section-header">
+                        <p class="section-label">3D ENHANCEMENT</p>
+                        <label class="switch mini">
+                            <input type="checkbox" id="enhancementToggle">
+                            <span class="slider round"></span>
+                        </label>
+                    </div>
+                    <div class="button-group" id="modeGroup">
+                        <button class="mode-btn active" data-mode="Normal">Normal</button>
+                        <button class="mode-btn" data-mode="5.1">5.1</button>
+                        <button class="mode-btn" data-mode="7.1">7.1</button>
+                        <button class="mode-btn" data-mode="32D">32D</button>
+                        <button class="mode-btn" data-mode="8D">8D</button>
+                    </div>
+                    <div class="slider-group">
+                        <span class="tiny-label">BASS TUNER (CUT/BOOST)</span>
+                        <input type="range" id="bassSlider" min="-15" max="30" value="0" class="custom-slider bass-accent">
+                    </div>
+                    <div class="slider-group">
+                        <span class="tiny-label">SURROUND WIDTH</span>
+                        <input type="range" id="surroundSlider" min="0" max="100" value="70" class="custom-slider voice-accent">
+                    </div>
+                </div>
+
+                <div class="divider"></div>
+
+                <!-- Frequency Mixer Sub-Section -->
+                <div class="sub-section disabled" id="mixSub">
+                    <div class="section-header">
+                        <p class="section-label">FREQUENCY MIXER</p>
+                        <label class="switch mini">
+                            <input type="checkbox" id="mixerToggle">
+                            <span class="slider round"></span>
+                        </label>
+                    </div>
+                    <div class="slider-group">
+                        <span class="tiny-label">BASS VOLUME</span>
+                        <input type="range" id="mixBass" min="0" max="200" value="100" class="custom-slider bass-accent">
+                    </div>
+                    <div class="slider-group">
+                        <span class="tiny-label">VOICE VOLUME</span>
+                        <input type="range" id="mixVoice" min="0" max="200" value="100" class="custom-slider voice-accent">
+                    </div>
+                    <div class="slider-group">
+                        <span class="tiny-label">TIMBRE VOLUME</span>
+                        <input type="range" id="mixTimbre" min="0" max="200" value="100" class="custom-slider timbre-accent">
+                    </div>
+                </div>
+            </section>
+
+            <!-- Bottom Master Controls -->
+            <div class="player-controls">
+                <div class="knob-section">
+                    <div class="knob-wrapper">
+                        <div class="knob" id="volKnob" data-value="70">
+                            <div class="knob-inner">
+                                <span id="volLabel">70%</span>
+                            </div>
+                            <div class="knob-ring"></div>
+                        </div>
+                        <p class="tiny-label">VOLUME</p>
+                    </div>
+                    <div class="knob-wrapper">
+                        <div class="knob" id="bassKnob" data-value="0">
+                            <div class="knob-inner">
+                                <span id="bassLabel">MIN</span>
+                            </div>
+                            <div class="knob-ring"></div>
+                        </div>
+                        <p class="tiny-label">BASS</p>
+                    </div>
+                </div>
+                
+                <div class="transport-wrap">
+                    <div class="transport">
+                        <button id="prevBtn" class="control-btn small">⏮</button>
+                        <button id="playPauseBtn" class="control-btn main">▶</button>
+                        <button id="nextBtn" class="control-btn small">⏭</button>
+                    </div>
+                </div>
+                <div id="statusIndicator">
+                    <span id="statusDot"></span>
+                    <p id="statusText">PRO ENGINE READY</p>
+                </div>
+            </div>
+        </main>
+    </div>
+    <script src="app.js"></script>
+</body>
+</html>
