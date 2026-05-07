@@ -15,18 +15,67 @@ import com.google.android.material.switchmaterial.SwitchMaterial
 
 class MainActivity : AppCompatActivity() {
 
+    private lateinit var trackInfo: android.widget.TextView
+    private lateinit var nowPlayingTitle: android.widget.TextView
+    
+    private val metadataReceiver = object : android.content.BroadcastReceiver() {
+        override fun onReceive(context: Context?, intent: android.content.Intent?) {
+            if (intent?.action == "TRACK_METADATA_UPDATE") {
+                val track = intent.getStringExtra("track") ?: "Unknown"
+                val artist = intent.getStringExtra("artist") ?: "Unknown"
+                nowPlayingTitle.text = "NOW PLAYING ON SPOTIFY"
+                trackInfo.text = "$track - $artist"
+            }
+        }
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
-        // Check for Notification permissions for Android 13+ Foreground Service
         checkPermissions()
-
-        // 1. Boot Service immediately explicitly so it spins up the Session watcher
         startAudioService()
-
-        // 2. Map actions 
         setupUI()
+        setupSpotifyControls()
+        
+        // Register metadata listener
+        val filter = android.content.IntentFilter("TRACK_METADATA_UPDATE")
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            registerReceiver(metadataReceiver, filter, Context.RECEIVER_EXPORTED)
+        } else {
+            registerReceiver(metadataReceiver, filter)
+        }
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        unregisterReceiver(metadataReceiver)
+    }
+
+    private fun setupSpotifyControls() {
+        trackInfo = findViewById(R.id.trackInfo)
+        nowPlayingTitle = findViewById(R.id.nowPlayingTitle)
+        
+        Toast.makeText(this, "Enable 'Device Broadcast Status' in Spotify Settings for track info", Toast.LENGTH_LONG).show()
+
+        val btnPrev = findViewById<android.widget.Button>(R.id.btnPrev)
+        val btnPlayPause = findViewById<android.widget.Button>(R.id.btnPlayPause)
+        val btnNext = findViewById<android.widget.Button>(R.id.btnNext)
+
+        btnPrev.setOnClickListener { sendMediaKey(android.view.KeyEvent.KEYCODE_MEDIA_PREVIOUS) }
+        btnNext.setOnClickListener { sendMediaKey(android.view.KeyEvent.KEYCODE_MEDIA_NEXT) }
+        btnPlayPause.setOnClickListener { 
+            sendMediaKey(android.view.KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE)
+            btnPlayPause.text = if (btnPlayPause.text == "▶") "⏸" else "▶"
+        }
+    }
+
+    private fun sendMediaKey(keyCode: Int) {
+        val audioManager = getSystemService(Context.AUDIO_SERVICE) as android.media.AudioManager
+        val eventDown = android.view.KeyEvent(android.view.KeyEvent.ACTION_DOWN, keyCode)
+        val eventUp = android.view.KeyEvent(android.view.KeyEvent.ACTION_UP, keyCode)
+        audioManager.dispatchMediaKeyEvent(eventDown)
+        audioManager.dispatchMediaKeyEvent(eventUp)
     }
 
     private fun checkPermissions() {

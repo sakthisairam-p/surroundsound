@@ -15,16 +15,20 @@ import android.util.Log
 class AudioService : Service() {
 
     private var globalDynamics: DynamicsProcessing? = null
+    private var visualizer: android.media.audiofx.Visualizer? = null
+    private var loudnessEnhancer: android.media.audiofx.LoudnessEnhancer? = null
 
     data class AudioSessionEffects(
         var equalizer: Equalizer? = null,
         var bassBoost: BassBoost? = null,
-        var virtualizer: Virtualizer? = null
+        var virtualizer: Virtualizer? = null,
+        var loudness: android.media.audiofx.LoudnessEnhancer? = null
     ) {
         fun release() {
             try { equalizer?.release() } catch (e: Exception) {}
             try { bassBoost?.release() } catch (e: Exception) {}
             try { virtualizer?.release() } catch (e: Exception) {}
+            try { loudness?.release() } catch (e: Exception) {}
         }
     }
 
@@ -36,8 +40,32 @@ class AudioService : Service() {
     override fun onCreate() {
         super.onCreate()
         startForegroundService()
-        applyGlobalDynamicsFallback()
+        
+        // Key fix: Attach a visualizer to session 0 to keep the system audio hook alive
+        setupGlobalHook()
+        
         applyEffectsToSession(0)
+    }
+
+    private fun setupGlobalHook() {
+        try {
+            // Priority 1000 to be on top of other effects
+            visualizer = android.media.audiofx.Visualizer(0).apply {
+                enabled = false
+                captureSize = android.media.audiofx.Visualizer.getCaptureSizeRange()[1]
+                enabled = true
+            }
+            
+            loudnessEnhancer = android.media.audiofx.LoudnessEnhancer(0).apply {
+                enabled = true
+            }
+            
+            applyGlobalDynamicsFallback()
+            
+            Log.d("SYSTEM_AUDIO", "Global Hardware Hook Established (Session 0)")
+        } catch (e: Exception) {
+            Log.e("SYSTEM_AUDIO", "Global hook failed: ${e.message}")
+        }
     }
 
     private fun startForegroundService() {
@@ -54,7 +82,7 @@ class AudioService : Service() {
             Notification.Builder(this)
         }
             .setContentTitle("3D Surround Pro is ACTIVE")
-            .setContentText("Enhancing background audio in real-time...")
+            .setContentText("Controlling system audio in real-time...")
             .setSmallIcon(android.R.drawable.ic_media_play)
             .setOngoing(true)
             .build()
@@ -71,13 +99,11 @@ class AudioService : Service() {
         val sessionId = intent?.getIntExtra("SESSION_ID", -1) ?: -1
 
         if (action == AudioEffect.ACTION_OPEN_AUDIO_EFFECT_CONTROL_SESSION && sessionId != -1) {
-            Log.d("SYSTEM_AUDIO", "Opening Session: $sessionId")
+            Log.d("SYSTEM_AUDIO", "Latching to App Session: $sessionId")
             applyEffectsToSession(sessionId)
         } else if (action == AudioEffect.ACTION_CLOSE_AUDIO_EFFECT_CONTROL_SESSION && sessionId != -1) {
-            Log.d("SYSTEM_AUDIO", "Closing Session: $sessionId")
             activeSessions.remove(sessionId)?.release()
         } else if (action == "UPDATE_SETTINGS") {
-            Log.d("SYSTEM_AUDIO", "Updating active sessions...")
             updateAllSessions()
         }
 
@@ -92,7 +118,7 @@ class AudioService : Service() {
                     2, true, 4, true, 4, true, 4, true
                 )
                 globalDynamics = DynamicsProcessing(1000, 0, builder.build())
-                Log.d("SYSTEM_AUDIO", "Latched to Hardware Fallback (DynamicsProcessing)")
+                globalDynamics?.enabled = true
             } catch (e: Exception) {
                 Log.e("SYSTEM_AUDIO", "Failed to start global dynamics: ${e.message}")
             }
@@ -105,25 +131,28 @@ class AudioService : Service() {
         try {
             val effects = AudioSessionEffects()
             
-            // Priority 1000 ensures our app takes control
             effects.equalizer = Equalizer(1000, sessionId)
             effects.bassBoost = BassBoost(1000, sessionId)
             effects.virtualizer = Virtualizer(1000, sessionId)
+            effects.loudness = android.media.audiofx.LoudnessEnhancer(sessionId)
             
             activeSessions[sessionId] = effects
             updateSessionSettings(effects)
             
-            Log.d("SYSTEM_AUDIO", "Successfully attached effects to session $sessionId")
+            Log.d("SYSTEM_AUDIO", "Attached controls to session $sessionId")
         } catch (e: Exception) {
             Log.e("SYSTEM_AUDIO", "Failed to attach to $sessionId: ${e.message}")
         }
     }
 
     private fun updateAllSessions() {
-        // Update global fallback
         val prefs = getSharedPreferences("AudioProPrefs", Context.MODE_PRIVATE)
         val power = prefs.getBoolean("power_switch", true)
-        try { globalDynamics?.enabled = power } catch (e: Exception) {}
+        
+        try { 
+            globalDynamics?.enabled = power 
+            loudnessEnhancer?.enabled = power
+        } catch (e: Exception) {}
 
         for ((_, effects) in activeSessions) {
             updateSessionSettings(effects)
@@ -138,6 +167,7 @@ class AudioService : Service() {
 
         try {
             effects.equalizer?.enabled = power
+            effects.loudness?.enabled = power
             
             effects.bassBoost?.let {
                 it.enabled = power
@@ -153,7 +183,7 @@ class AudioService : Service() {
                 }
             }
         } catch (e: Exception) {
-            Log.e("SYSTEM_AUDIO", "Error updating settings: ${e.message}")
+            Log.e("SYSTEM_AUDIO", "Update error: ${e.message}")
         }
     }
 
@@ -163,6 +193,10 @@ class AudioService : Service() {
             effects.release()
         }
         activeSessions.clear()
-        try { globalDynamics?.release() } catch(e: Exception){}
+        try { 
+            globalDynamics?.release() 
+            visualizer?.release()
+            loudnessEnhancer?.release()
+        } catch(e: Exception){}
     }
 }
